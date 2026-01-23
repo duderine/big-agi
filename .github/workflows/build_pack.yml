@@ -3,6 +3,7 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [ "main" ] # Ou a sua branch principal
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io

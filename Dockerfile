@@ -3,7 +3,7 @@ FROM node:20-bookworm-slim AS builder
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY . .
-ENV NEXT_PRIVATE_STANDALONE true
+ENV NEXT_PRIVATE_STANDALONE=true
 RUN npm install && npm run build
 
 FROM node:20-bookworm-slim
