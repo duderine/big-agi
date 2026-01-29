@@ -61,3 +61,74 @@ enum LinkStorageVisibility {
 enum LinkStorageDataType {
   CHAT_V1
 }
+
+//
+// Storage of Assets (migrated from IndexedDB)
+//
+model Asset {
+  id String @id @default(uuid())
+
+  // Asset identification and classification
+  assetType AssetAssetType
+  label     String
+
+  // Asset data (base64 encoded)
+  mimeType String
+  base64   String // Base64 encoded content (not a data URL)
+
+  // Asset origin information
+  originType AssetOriginType // 'user' | 'generated'
+  originSource String // e.g., 'attachment', 'ai-text-to-image'
+  originMedia String? // e.g., 'camera', 'screencapture', 'file-open'
+  originUrl String?
+  originFileName String?
+  originGeneratorName String?
+  originPrompt String?
+  originParameters Json?
+  originGeneratedAt DateTime?
+
+  // Asset metadata (JSON for flexibility)
+  metadata Json // Contains type-specific metadata
+
+  // Cache for thumbnails and conversions
+  cache Json // Contains cached conversions like thumb256
+
+  // Context and scope (migrated from IndexedDB)
+  contextId AssetContextId @default(GLOBAL)
+  scopeId   AssetScopeId
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Indexes for performance
+  @@index([assetType])
+  @@index([contextId, scopeId])
+  @@index([assetType, contextId, scopeId])
+  @@index([mimeType])
+  @@index([originType, originSource])
+  @@index([createdAt])
+}
+
+enum AssetAssetType {
+  IMAGE
+  AUDIO
+  // VIDEO
+  // DOCUMENT
+  // TEXT
+}
+
+enum AssetOriginType {
+  USER
+  GENERATED
+}
+
+enum AssetContextId {
+  GLOBAL
+}
+
+enum AssetScopeId {
+  APP_CHAT
+  APP_DRAW
+  ATTACHMENT_DRAFTS
+}
