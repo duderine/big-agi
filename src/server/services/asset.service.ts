@@ -1,6 +1,16 @@
 import { PrismaClient, Asset, AssetAssetType, AssetOriginType, AssetContextId, AssetScopeId } from '@prisma/client';
 
-const prisma = new PrismaClient();
+// Use SQLite for local development, PostgreSQL for production
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+// For development, use in-memory SQLite database
+const prisma = isDevelopment ? new PrismaClient({
+  datasources: {
+    db: {
+      url: 'file:./dev.db'
+    }
+  }
+}) : new PrismaClient();
 
 // Types matching the original DBlob types
 export type AssetId = string;
