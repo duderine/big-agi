@@ -18,7 +18,6 @@ import { useToggleableBoolean } from '~/common/util/hooks/useToggleableBoolean';
 import { useUIContentScaling } from '~/common/stores/store-ui';
 
 import { FromText } from './FromText';
-import { FromYouTube } from './FromYouTube';
 import { prependSimplePersona, SimplePersonaProvenance } from '../store-app-personas';
 
 
@@ -33,11 +32,10 @@ const Prompts: string[] = [
   'Compare the draft character sheet with the original transcript, validating its content and ensuring it captures both the speaker’s overt characteristics and the subtler undertones. Omit unknown information, fine-tune any areas that require clarity, have been overlooked, or require more authenticity. Use clear and illustrative examples from the transcript to refine your sheet and offer meaningful, tangible reference points. Your output is a coherent, comprehensive, and nuanced instruction that begins with \'You are a...\' and  serves as a go-to guide for an actor recreating the persona.',
 ];
 
-const getTitlesForTab = (selectedTab: number): string[] => {
-  const analyzeSubject: string = selectedTab ? 'text' : 'transcript';
+const getTitlesForTab = (): string[] => {
   return [
     'Common: Creator System Prompt',
-    `Analyze the ${analyzeSubject}`,
+    'Analyze the text',
     'Define the character',
     'Cross the t\'s',
   ];
@@ -112,7 +110,7 @@ export function Creator(props: { display: boolean }) {
 
 
   // editable prompts
-  const promptTitles = React.useMemo(() => getTitlesForTab(selectedTab), [selectedTab]);
+  const promptTitles = React.useMemo(() => getTitlesForTab(), []);
 
   const {
     strings: editedInstructions, stringEditors: instructionEditors,
@@ -186,7 +184,7 @@ export function Creator(props: { display: boolean }) {
   return <>
 
     <Typography level='title-sm' mb={3}>
-      Create the <em>System Prompt</em> of an AI Persona from YouTube or Text.
+      Create the <em>System Prompt</em> of an AI Persona from Text.
     </Typography>
 
 
@@ -216,13 +214,9 @@ export function Creator(props: { display: boolean }) {
           '& > *:first-of-type': { borderTopLeftRadius: '0.5rem' },
         }}
       >
-        <Tab>From YouTube</Tab>
         <Tab>From Text</Tab>
       </TabList>
       <TabPanel keepMounted value={0} sx={{ p: 3 }}>
-        <FromYouTube isTransforming={isTransforming} onCreate={handleCreate} />
-      </TabPanel>
-      <TabPanel keepMounted value={1} sx={{ p: 3 }}>
         <FromText isCreating={isTransforming} onCreate={handleCreate} />
       </TabPanel>
 
