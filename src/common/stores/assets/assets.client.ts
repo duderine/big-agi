@@ -70,12 +70,12 @@ export function useAddAsset() {
       const result = await apiQuery.assets.addAsset.mutate(params);
       return result.assetId;
     },
-    onSuccess: (assetId) => {
+    onSuccess: (assetId: string) => {
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['assets'] });
       return assetId;
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Failed to add asset:', error);
     },
   });
@@ -124,7 +124,7 @@ export function useUpdateAsset() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assets'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Failed to update asset:', error);
     },
   });
@@ -144,7 +144,7 @@ export function useTransferAssetContextScope() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assets'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Failed to transfer asset context/scope:', error);
     },
   });
@@ -160,7 +160,7 @@ export function useDeleteAsset() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assets'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Failed to delete asset:', error);
     },
   });

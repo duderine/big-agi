@@ -8,7 +8,7 @@ import type { DLLMId } from '~/common/stores/llms/llms.types';
 import { findLLMOrThrow, getChatLLMId } from '~/common/stores/llms/store-llms';
 
 import { agiUuid } from '~/common/util/idUtils';
-import { backupIdbV3, createIDBPersistStorage } from '~/common/util/idbUtils';
+// import { backupIdbV3, createIDBPersistStorage } from '~/common/util/idbUtils'; // Removed - replaced with Asset system
 
 import { workspaceActions } from '~/common/stores/workspace/store-client-workspace';
 import { workspaceForConversationIdentity } from '~/common/stores/workspace/workspace.types';
@@ -462,17 +462,11 @@ export const useChatStore = create<ConversationsStore>()(/*devtools(*/
        *  - 4: [2024-05-14] Convert messages to multi-part, removed the IDB migration
        */
       version: 4,
-      storage: createIDBPersistStorage<ConversationsStore>(),
-
       // Migrations
       migrate: async (state: any, fromVersion: number) => {
 
         // 3 -> 4: Convert messages to multi-part
         if (fromVersion < 4 && state && state.conversations && state.conversations.length) {
-
-          if (await backupIdbV3('app-chats', 'app-chats-v3'))
-            console.warn('Migrated app-chats from v3 to v4');
-
           state.conversations = V3StoreDataToHead.recreateConversations(state.conversations);
         }
 

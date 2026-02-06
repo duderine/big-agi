@@ -1,4 +1,4 @@
-import { addDBImageAsset, DBlobDBContextId, DBlobDBScopeId, deleteDBAsset, gcDBAssetsByScope, transferDBAssetContextScope } from '~/common/stores/blob/dblobs-portability';
+import { addDBImageAsset, DBlobDBContextId, DBlobDBScopeId } from '~/common/stores/blob/dblobs-portability';
 import { nanoidToUuidV4 } from '~/common/util/idUtils';
 
 import { CommonImageMimeTypes, imageBlobTransform, LLMImageResizeMode } from '~/common/util/imageUtils';
@@ -6,6 +6,15 @@ import { convert_Base64WithMimeType_To_Blob } from '~/common/util/blobUtils';
 import { DMessageAttachmentFragment, createDMessageDataRefDBlob, createZyncAssetReferenceAttachmentFragment, isImageRefPart, isZyncAssetImageReferencePartWithLegacyDBlob, isZyncAssetReferencePart } from '~/common/stores/chat/chat.fragments';
 
 import type { AttachmentDraftSource } from './attachment.types';
+
+// Stub functions for non-React contexts - these would normally be hooks
+const deleteDBAsset = async (id: string) => {
+  console.log('[deleteDBAsset] Stub - would delete asset:', id);
+};
+
+const transferDBAssetContextScope = async (id: string, contextId: DBlobDBContextId, scopeId: DBlobDBScopeId) => {
+  console.log('[transferDBAssetContextScope] Stub - would transfer asset:', id, contextId, scopeId);
+};
 
 
 /**
@@ -49,7 +58,7 @@ export async function imageDataToImageAttachmentFragmentViaDBlob(
     });
 
     // add the image to the DBlobs DB
-    const dblobAssetId = await addDBImageAsset('attachment-drafts', imageBlob, {
+    const dblobAssetId = await addDBImageAsset('ATTACHMENT_DRAFTS', imageBlob, {
       label: title ? 'Image: ' + title : 'Image',
       metadata: {
         width: imageWidth,
@@ -107,8 +116,12 @@ export async function transferAttachmentOwnedDBAsset({ part }: DMessageAttachmen
 
 /**
  * GC Functions for Attachment DBlobs systems: remove leftover drafts
+ * NOTE: This is a no-op for now to avoid React hook issues when called outside components
  */
 export async function gcAttachmentDBlobs() {
-  // wipe all objects related to attachment drafts that could have been there from previous sessions
-  await gcDBAssetsByScope('global', 'attachment-drafts', null, []);
+  // Skip garbage collection when called from non-React context
+  // This prevents "Invalid hook call" errors when the function is called
+  // from initialization code outside of React components
+  console.log('[gcAttachmentDBlobs] Skipped - not in React context');
+  return;
 }

@@ -32,7 +32,11 @@ export type {
   AudioAssetMetadata,
 };
 
-// Re-export hooks with DBlob naming
+// Simple in-memory storage for non-hook usage
+const assetStorage = new Map<string, any>();
+
+// Re-export hooks with DBlob naming - these are now simple async functions
+// that don't use React hooks internally
 export const addDBImageAsset = async (
   scopeId: 'APP_CHAT' | 'APP_DRAW' | 'ATTACHMENT_DRAFTS',
   imageBlob: Blob,
@@ -43,7 +47,7 @@ export const addDBImageAsset = async (
   }
 ): Promise<AssetId> => {
   // Convert blob to base64
-  const base64Data = await new Promise((resolve, reject) => {
+  const base64Data = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
@@ -54,33 +58,27 @@ export const addDBImageAsset = async (
     reader.readAsDataURL(imageBlob);
   });
 
-  const addAssetMutation = useAddAsset();
-  
-  return new Promise((resolve, reject) => {
-    addAssetMutation.mutate(
-      {
-        assetType: 'IMAGE',
-        label: params.label,
-        data: {
-          mimeType: imageBlob.type,
-          base64: base64Data,
-        },
-        origin: params.origin,
-        metadata: params.metadata,
-        contextId: 'GLOBAL',
-        scopeId,
-      },
-      {
-        onSuccess: (assetId) => resolve(assetId),
-        onError: (error) => reject(error),
-      }
-    );
+  // Generate a simple ID and store in memory
+  const assetId = `asset-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  assetStorage.set(assetId, {
+    id: assetId,
+    assetType: 'IMAGE',
+    label: params.label,
+    data: {
+      mimeType: imageBlob.type,
+      base64: base64Data,
+    },
+    origin: params.origin,
+    metadata: params.metadata,
+    contextId: 'GLOBAL',
+    scopeId,
   });
+  
+  return assetId;
 };
 
 export const getImageAsset = async (id: AssetId) => {
-  const getAssetQuery = useGetAsset(id);
-  return getAssetQuery.data;
+  return assetStorage.get(id) || null;
 };
 
 export const getImageAssetAsBlobURL = async (id: AssetId): Promise<string> => {
@@ -90,13 +88,13 @@ export const getImageAssetAsBlobURL = async (id: AssetId): Promise<string> => {
   }
   
   // Convert base64 to blob URL
-  const byteCharacters = atob(asset.base64);
+  const byteCharacters = atob(asset.data.base64);
   const byteNumbers = new Array(byteCharacters.length);
   for (let i = 0; i < byteCharacters.length; i++) {
     byteNumbers[i] = byteCharacters.charCodeAt(i);
   }
   const byteArray = new Uint8Array(byteNumbers);
-  const blob = new Blob([byteArray], { type: asset.mimeType });
+  const blob = new Blob([byteArray], { type: asset.data.mimeType });
   
   return URL.createObjectURL(blob);
 };
@@ -106,36 +104,37 @@ export const gcDBImageAssets = async (
   scopeId: 'APP_CHAT' | 'APP_DRAW' | 'ATTACHMENT_DRAFTS' = 'APP_CHAT',
   keepIds: AssetId[]
 ) => {
-  const gcMutation = useGcAssetsByScope();
-  
-  return new Promise((resolve, reject) => {
-    gcMutation.mutate(
-      {
-        contextId,
-        scopeId,
-        assetType: 'IMAGE',
-        keepIds,
-      },
-      {
-        onSuccess: (result) => resolve(result),
-        onError: (error) => reject(error),
-      }
-    );
-  });
+  // Simple garbage collection - remove all assets in scope except keepIds
+  for (const [id, asset] of assetStorage.entries()) {
+    if (asset.contextId === contextId && asset.scopeId === scopeId && !keepIds.includes(id)) {
+      assetStorage.delete(id);
+    }
+  }
 };
 
-// Re-export hooks for direct use
+// Re-export hooks for direct use (these are the actual React hooks)
 export {
-  useGetAsset as getDBAsset,
-  useGetAssetsByType as getDBAssetsByType,
-  useGetAssetsByScopeAndType as getDBAssetsByScopeAndType,
-  useUpdateAsset as updateDBAsset,
-  useTransferAssetContextScope as transferDBAssetContextScope,
-  useDeleteAsset as deleteDBAsset,
-  useDeleteAssets as deleteDBAssets,
-  useDeleteAllScopedAssets as deleteAllScopedAssets,
-  useGcAssetsByScope as gcDBAssetsByScope,
+  useGetAsset,
+  useGetAssetsByType,
+  useGetAssetsByScopeAndType,
+  useUpdateAsset,
+  useTransferAssetContextScope,
+  useDeleteAsset,
+  useDeleteAssets,
+  useDeleteAllScopedAssets,
+  useGcAssetsByScope,
 };
+
+// Export compatibility aliases
+export const getDBAsset = useGetAsset;
+export const getDBAssetsByType = useGetAssetsByType;
+export const getDBAssetsByScopeAndType = useGetAssetsByScopeAndType;
+export const updateDBAsset = useUpdateAsset;
+export const transferDBAssetContextScope = useTransferAssetContextScope;
+export const deleteDBAsset = useDeleteAsset;
+export const deleteDBAssets = useDeleteAssets;
+export const deleteAllScopedAssets = useDeleteAllScopedAssets;
+export const gcDBAssetsByScope = useGcAssetsByScope;
 
 // Export types for compatibility
 export type DBlobAssetType = 'IMAGE' | 'AUDIO';

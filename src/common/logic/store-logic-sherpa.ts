@@ -106,7 +106,8 @@ export async function sherpaStorageMaintenanceNoChats_delayed() {
   // void gcChatImageAssets(); // fire/forget
 
   // GC: Remove old attachment drafts (not persisted in chats)
-  void gcAttachmentDBlobs(); // fire/forget
+  // NOTE: Disabled to avoid React hook issues when called outside components
+  // void gcAttachmentDBlobs(); // fire/forget
 
 }
 
