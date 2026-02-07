@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import { Alert, Box, Button, Card, CardContent, CircularProgress, Divider, FormLabel, Grid, IconButton, LinearProgress, Tab, tabClasses, TabList, TabPanel, Tabs, Typography } from '@mui/joy';
 import AddIcon from '@mui/icons-material/Add';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SettingsAccessibilityIcon from '@mui/icons-material/SettingsAccessibility';
 
@@ -18,7 +19,9 @@ import { useToggleableBoolean } from '~/common/util/hooks/useToggleableBoolean';
 import { useUIContentScaling } from '~/common/stores/store-ui';
 
 import { FromText } from './FromText';
-import { prependSimplePersona, SimplePersonaProvenance } from '../store-app-personas';
+import { PersonaEditor } from './PersonaEditor';
+import { PersonaGallery } from './PersonaGallery';
+import { prependSimplePersona, SimplePersonaProvenance, type SimplePersona } from '../store-app-personas';
 
 
 // delay to start a new chain after the previous one finishes
@@ -102,6 +105,10 @@ export function Creator(props: { display: boolean }) {
   const [chainInputText, setChainInputText] = React.useState<string | null>(null);
   const [inputProvenance, setInputProvenance] = React.useState<SimplePersonaProvenance | null>(null);
   const [showIntermediates, setShowIntermediates] = React.useState(false);
+  
+  // New rich persona management state
+  const [viewMode, setViewMode] = React.useState<'gallery' | 'create' | 'edit' | 'ai-create'>('gallery');
+  const [editingPersona, setEditingPersona] = React.useState<SimplePersona | null>(null);
 
   // external state
   const contentScaling = useUIContentScaling();
@@ -176,16 +183,94 @@ export function Creator(props: { display: boolean }) {
     userCancelChain();
   }, [userCancelChain]);
 
+  // New handlers for rich persona management
+  const handleCreateNew = React.useCallback(() => {
+    setEditingPersona(null);
+    setViewMode('create');
+  }, []);
+
+  const handleEditPersona = React.useCallback((persona: SimplePersona) => {
+    setEditingPersona(persona);
+    setViewMode('edit');
+  }, []);
+
+  const handleCloseEditor = React.useCallback(() => {
+    setViewMode('gallery');
+    setEditingPersona(null);
+  }, []);
+
+  const handleAICreate = React.useCallback(() => {
+    setViewMode('ai-create');
+  }, []);
+
+  const handleBackToGallery = React.useCallback(() => {
+    setViewMode('gallery');
+  }, []);
+
 
   // Hide the GFX, but not the logic (hooks)
   if (!props.display)
     return null;
 
+  // Render based on view mode
+  if (viewMode === 'gallery') {
+    return (
+      <Box>
+        <Typography level='title-sm' mb={3}>
+          Manage your AI Personas
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+          <Button variant="solid" startDecorator={<AddIcon />} onClick={handleCreateNew}>
+            Create Manually
+          </Button>
+          <Button variant="outlined" onClick={handleAICreate}>
+            Create with AI
+          </Button>
+        </Box>
+        <PersonaGallery 
+          onCreateNew={handleCreateNew} 
+          onEdit={handleEditPersona}
+        />
+      </Box>
+    );
+  }
+
+  if (viewMode === 'create' || viewMode === 'edit') {
+    return (
+      <Box>
+        <Button 
+          variant="soft" 
+          color="neutral" 
+          startDecorator={<ArrowBackIcon />}
+          onClick={handleCloseEditor}
+          sx={{ mb: 2 }}
+        >
+          Back to Gallery
+        </Button>
+        <PersonaEditor
+          initialPersona={editingPersona}
+          onClose={handleCloseEditor}
+        />
+      </Box>
+    );
+  }
+
+  // AI Create mode (original functionality)
   return <>
 
-    <Typography level='title-sm' mb={3}>
-      Create the <em>System Prompt</em> of an AI Persona from Text.
-    </Typography>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Typography level='title-sm'>
+        Create the <em>System Prompt</em> of an AI Persona from Text.
+      </Typography>
+      <Button 
+        variant="soft" 
+        color="neutral" 
+        startDecorator={<ArrowBackIcon />}
+        onClick={handleBackToGallery}
+      >
+        Back to Gallery
+      </Button>
+    </Box>
 
 
     {/* Inputs */}
