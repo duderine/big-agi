@@ -1,6 +1,6 @@
 import { fileOpen, fileSave, FileWithHandle } from 'browser-fs-access';
 
-import { SystemPurposeId, SystemPurposes } from '../../data';
+import { SystemPurposes } from '../../data';
 
 import { Brand } from '~/common/app.config';
 import { DataAtRestV1 } from '~/common/stores/chat/chats.converters';
@@ -211,8 +211,9 @@ export function conversationToMarkdown(conversation: DConversation, hideSystemMe
       case 'assistant':
         const purpose = message.purposeId || conversation.systemPurposeId || null;
         senderName = `${purpose || 'Assistant'} · *${prettyShortChatModelName(message.generator?.name || '')}*`.trim();
-        if (purpose && purpose in SystemPurposes)
-          senderName = `${SystemPurposes[purpose as SystemPurposeId]?.symbol || ''} ${senderName}`.trim();
+        // Only Custom persona exists now - add its symbol
+        if (purpose === 'Custom')
+          senderName = `${SystemPurposes.Custom.symbol} ${senderName}`.trim();
         break;
       case 'user':
         senderName = '👤 You';

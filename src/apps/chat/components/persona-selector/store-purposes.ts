@@ -4,10 +4,10 @@ import { persist } from 'zustand/middleware';
 
 interface PurposeStore {
 
-  // state
+  // state - kept for compatibility but no longer used
   hiddenPurposeIDs: string[];
 
-  // actions
+  // actions - no-op since we only have Custom persona now
   toggleHiddenPurposeId: (purposeId: string) => void;
 
 }
@@ -17,40 +17,24 @@ export const usePurposeStore = create<PurposeStore>()(
   persist(
     (set) => ({
 
-      // default state
-      hiddenPurposeIDs: ['Developer', 'Designer', 'YouTubeTranscriber'],
+      // default state - empty since we removed all default personas
+      hiddenPurposeIDs: [],
 
-      toggleHiddenPurposeId: (purposeId: string) => {
-        set(state => {
-          const hiddenPurposeIDs = state.hiddenPurposeIDs.includes(purposeId)
-            ? state.hiddenPurposeIDs.filter((id) => id !== purposeId)
-            : [...state.hiddenPurposeIDs, purposeId];
-          return {
-            hiddenPurposeIDs,
-          };
-        });
+      toggleHiddenPurposeId: () => {
+        // No-op - only Custom persona exists now, nothing to hide/show
       },
 
     }),
     {
       name: 'app-purpose',
-
-      /* versioning:
-       * 1: hide 'Developer' as 'DeveloperPreview' is best
-       * 2: add a hidden 'YouTubeTranscriber' purpose
-       */
-      version: 2,
+      version: 3,
 
       migrate: (state: any, fromVersion: number): PurposeStore => {
-        // 0 -> 1: rename 'enterToSend' to 'enterIsNewline' (flip the meaning)
-        if (state && fromVersion === 0)
-          if (!state.hiddenPurposeIDs.includes('Developer'))
-            state.hiddenPurposeIDs.push('Developer');
-        // 1 -> 2: add a hidden 'YouTubeTranscriber' purpose
-        if (state && fromVersion === 1)
-          if (!state.hiddenPurposeIDs.includes('YouTubeTranscriber'))
-            state.hiddenPurposeIDs.push('YouTubeTranscriber');
-        return state;
+        // Reset to empty since we removed all default personas
+        return {
+          hiddenPurposeIDs: [],
+          toggleHiddenPurposeId: () => {},
+        };
       },
     }),
 );
