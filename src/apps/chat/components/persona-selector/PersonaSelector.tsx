@@ -24,6 +24,8 @@ import { useChatStore } from '~/common/stores/chat/store-chats';
 import { useChipBoolean } from '~/common/components/useChipBoolean';
 import { useModelDomain } from '~/common/stores/llms/hooks/useModelDomain';
 import { useUIPreferencesStore } from '~/common/stores/store-ui';
+import { useSimplePersonas, incrementPersonaUsage, type SimplePersona } from '~/apps/personas/store-app-personas';
+import { useLLMStore } from '~/common/stores/llms/store-llms';
 
 import { usePurposeStore } from './store-purposes';
 
@@ -147,6 +149,10 @@ export function PersonaSelector(props: {
   })));
   const { domainModelId: chatLLMId } = useModelDomain('primaryChat');
   const chatLLM = { id: chatLLMId ?? undefined }; // adapter for porting
+  
+  // custom personas state
+  const { favorites: favoritePersonas, regular: regularPersonas } = useSimplePersonas();
+  const hasCustomPersonas = favoritePersonas.length > 0 || regularPersonas.length > 0;
 
 
   // derived state
@@ -174,6 +180,34 @@ export function PersonaSelector(props: {
   const handlePurposeChanged = React.useCallback((purposeId: SystemPurposeId | null) => {
     if (purposeId && setSystemPurposeId)
       setSystemPurposeId(props.conversationId, purposeId);
+  }, [props.conversationId, setSystemPurposeId]);
+  
+  // Handle custom persona selection
+  const handleCustomPersonaSelect = React.useCallback((persona: SimplePersona) => {
+    // Apply the persona's system message to Custom
+    SystemPurposes['Custom'].systemMessage = persona.systemPrompt;
+    SystemPurposes['Custom'].title = persona.name;
+    SystemPurposes['Custom'].description = persona.description || 'Custom persona';
+    if (persona.pictureUrl) {
+      SystemPurposes['Custom'].imageUri = persona.pictureUrl;
+    }
+    
+    // Set the persona
+    if (setSystemPurposeId) {
+      setSystemPurposeId(props.conversationId, 'Custom');
+    }
+    
+    // Apply the persona's LLM if configured
+    if (persona.llmId) {
+      const llmStore = useLLMStore.getState();
+      const llm = llmStore.llms.find(l => l.id === persona.llmId);
+      if (llm) {
+        llmStore.setChatLLMId(persona.llmId);
+      }
+    }
+    
+    // Increment usage counter
+    incrementPersonaUsage(persona.id);
   }, [props.conversationId, setSystemPurposeId]);
 
   const handleAppendTranscriptAsMessage = React.useCallback((messageText: string) => {
@@ -314,6 +348,59 @@ export function PersonaSelector(props: {
             />
           );
         })}
+
+        {/* Custom Personas Section */}
+        {hasCustomPersonas && !editMode && (
+          <>
+            <Box sx={{ gridColumn: '1 / -1', mt: 2, mb: 1 }}>
+              <Typography level='title-sm' color='primary'>
+                My Personas
+              </Typography>
+            </Box>
+            
+            {/* Favorite Personas */}
+            {favoritePersonas.map((persona) => (
+              <Tile
+                key={'custom-' + persona.id}
+                text={persona.name}
+                imageUrl={persona.pictureUrl}
+                symbol={persona.pictureUrl ? undefined : '👤'}
+                isActive={systemPurposeId === 'Custom' && SystemPurposes['Custom'].title === persona.name}
+                isEditMode={false}
+                isHidden={false}
+                isHighlighted={true}
+                onClick={() => handleCustomPersonaSelect(persona)}
+              />
+            ))}
+            
+            {/* Regular Personas (show only first 3, or all if searching) */}
+            {regularPersonas.slice(0, 3).map((persona) => (
+              <Tile
+                key={'custom-' + persona.id}
+                text={persona.name}
+                imageUrl={persona.pictureUrl}
+                symbol={persona.pictureUrl ? undefined : '👤'}
+                isActive={systemPurposeId === 'Custom' && SystemPurposes['Custom'].title === persona.name}
+                isEditMode={false}
+                isHidden={false}
+                onClick={() => handleCustomPersonaSelect(persona)}
+              />
+            ))}
+            
+            {/* Show more indicator if there are more personas */}
+            {regularPersonas.length > 3 && (
+              <Tile
+                text={`+${regularPersonas.length - 3} more`}
+                symbol='⋯'
+                isActive={false}
+                isEditMode={false}
+                isHidden={false}
+                onClick={() => navigateToPersonas()}
+                sx={{ opacity: 0.7 }}
+              />
+            )}
+          </>
+        )}
 
         {/* Persona Creator Tile */}
         {(editMode || !hidePersonaCreator) && (

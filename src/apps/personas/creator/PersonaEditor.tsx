@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {
   Box, Button, Card, CardContent, Chip, Divider, FormControl, FormLabel, Grid,
-  IconButton, Input, Stack, Switch, Textarea, Typography
+  IconButton, Input, Slider, Stack, Switch, Textarea, Typography
 } from '@mui/joy';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -9,11 +9,14 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 import { useLLMSelect, useLLMSelectLocalState } from '~/common/components/forms/useLLMSelect';
 import { useToggleableBoolean } from '~/common/util/hooks/useToggleableBoolean';
 import type { SimplePersona, SimplePersonaProvenance } from '../store-app-personas';
 import { addPersona, updatePersona } from '../store-app-personas';
+import type { DModelParameterValues } from '~/common/stores/llms/llms.parameters';
+
 
 
 interface PersonaEditorProps {
@@ -50,8 +53,25 @@ export function PersonaEditor({ initialPersona, onClose, onSave }: PersonaEditor
   // Advanced parameters toggle
   const advanced = useToggleableBoolean(false);
   
+  // LLM Parameters state
+  const [temperature, setTemperature] = React.useState(initialPersona?.llmParameters?.temperature ?? 0.7);
+  const [topP, setTopP] = React.useState(initialPersona?.llmParameters?.topP ?? 1);
+  const [maxTokens, setMaxTokens] = React.useState(initialPersona?.llmParameters?.maxTokens ?? 4096);
+  const [presencePenalty, setPresencePenalty] = React.useState(initialPersona?.llmParameters?.presencePenalty ?? 0);
+  const [frequencyPenalty, setFrequencyPenalty] = React.useState(initialPersona?.llmParameters?.frequencyPenalty ?? 0);
+  
   // Validation
   const isValid = name.trim() && systemPrompt.trim();
+  
+  // Reset parameters to defaults
+  const resetParameters = () => {
+    setTemperature(0.7);
+    setTopP(1);
+    setMaxTokens(4096);
+    setPresencePenalty(0);
+    setFrequencyPenalty(0);
+  };
+
   
   // Handle image upload
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,6 +91,15 @@ export function PersonaEditor({ initialPersona, onClose, onSave }: PersonaEditor
     
     const finalCategory = showCustomCategory && customCategory ? customCategory : category;
     
+    // Build LLM parameters only if they differ from defaults
+    const llmParameters: DModelParameterValues = {
+      temperature,
+      topP,
+      maxTokens,
+      presencePenalty,
+      frequencyPenalty,
+    };
+    
     const personaData: Omit<SimplePersona, 'id' | 'creationDate'> = {
       name: name.trim(),
       description: description.trim() || undefined,
@@ -79,9 +108,10 @@ export function PersonaEditor({ initialPersona, onClose, onSave }: PersonaEditor
       pictureUrl: pictureUrl || undefined,
       isFavorite,
       llmId: personaLlm?.id,
-      llmParameters: undefined, // Can be extended later
+      llmParameters,
       usageCount: initialPersona?.usageCount || 0,
     };
+
     
     if (isEditing && initialPersona) {
       updatePersona(initialPersona.id, personaData);
@@ -277,18 +307,130 @@ export function PersonaEditor({ initialPersona, onClose, onSave }: PersonaEditor
                 size="sm"
               />
               <Typography level="body-sm" onClick={advanced.toggle} sx={{ cursor: 'pointer' }}>
-                Show Advanced Options
+                Show Model Parameters
               </Typography>
             </Box>
             
             {advanced.on && (
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'background.level1', borderRadius: 'md' }}>
-                <Typography level="body-sm" color="neutral">
-                  Advanced parameters (temperature, top_p, etc.) can be configured here in future updates.
-                </Typography>
+              <Box sx={{ mt: 2, p: 3, bgcolor: 'background.level1', borderRadius: 'md' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography level="title-sm">Model Parameters</Typography>
+                  <Button
+                    size="sm"
+                    variant="soft"
+                    color="neutral"
+                    startDecorator={<RestartAltIcon />}
+                    onClick={resetParameters}
+                  >
+                    Reset to Defaults
+                  </Button>
+                </Box>
+                
+                <Grid container spacing={3}>
+                  {/* Temperature */}
+                  <Grid xs={12} md={6}>
+                    <FormControl>
+                      <FormLabel>
+                        Temperature: <Typography component="span" color="primary">{temperature.toFixed(2)}</Typography>
+                      </FormLabel>
+                      <Slider
+                        value={temperature}
+                        onChange={(_, value) => setTemperature(value as number)}
+                        min={0}
+                        max={2}
+                        step={0.01}
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={(v) => v.toFixed(2)}
+                      />
+                      <Typography level="body-xs" color="neutral">
+                        Lower = more focused, Higher = more creative
+                      </Typography>
+                    </FormControl>
+                  </Grid>
+                  
+                  {/* Top P */}
+                  <Grid xs={12} md={6}>
+                    <FormControl>
+                      <FormLabel>
+                        Top P: <Typography component="span" color="primary">{topP.toFixed(2)}</Typography>
+                      </FormLabel>
+                      <Slider
+                        value={topP}
+                        onChange={(_, value) => setTopP(value as number)}
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={(v) => v.toFixed(2)}
+                      />
+                      <Typography level="body-xs" color="neutral">
+                        Nucleus sampling threshold
+                      </Typography>
+                    </FormControl>
+                  </Grid>
+                  
+                  {/* Max Tokens */}
+                  <Grid xs={12} md={6}>
+                    <FormControl>
+                      <FormLabel>Max Tokens</FormLabel>
+                      <Input
+                        type="number"
+                        value={maxTokens}
+                        onChange={(e) => setMaxTokens(parseInt(e.target.value) || 4096)}
+                        slotProps={{ input: { min: 1, max: 32768 } }}
+                      />
+                      <Typography level="body-xs" color="neutral">
+                        Maximum response length
+                      </Typography>
+                    </FormControl>
+                  </Grid>
+                  
+                  {/* Presence Penalty */}
+                  <Grid xs={12} md={6}>
+                    <FormControl>
+                      <FormLabel>
+                        Presence Penalty: <Typography component="span" color="primary">{presencePenalty.toFixed(2)}</Typography>
+                      </FormLabel>
+                      <Slider
+                        value={presencePenalty}
+                        onChange={(_, value) => setPresencePenalty(value as number)}
+                        min={-2}
+                        max={2}
+                        step={0.01}
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={(v) => v.toFixed(2)}
+                      />
+                      <Typography level="body-xs" color="neutral">
+                        Encourage new topics
+                      </Typography>
+                    </FormControl>
+                  </Grid>
+                  
+                  {/* Frequency Penalty */}
+                  <Grid xs={12} md={6}>
+                    <FormControl>
+                      <FormLabel>
+                        Frequency Penalty: <Typography component="span" color="primary">{frequencyPenalty.toFixed(2)}</Typography>
+                      </FormLabel>
+                      <Slider
+                        value={frequencyPenalty}
+                        onChange={(_, value) => setFrequencyPenalty(value as number)}
+                        min={-2}
+                        max={2}
+                        step={0.01}
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={(v) => v.toFixed(2)}
+                      />
+                      <Typography level="body-xs" color="neutral">
+                        Reduce repetition
+                      </Typography>
+                    </FormControl>
+                  </Grid>
+                </Grid>
               </Box>
             )}
           </Grid>
+
         </Grid>
         
         {/* Actions */}
